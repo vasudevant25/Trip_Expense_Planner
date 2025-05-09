@@ -16,7 +16,6 @@ else:
 
 # Load or create expenses
 if os.path.exists(EXPENSE_FILE):
-    print('Reading CSV File')
     expenses_df = pd.read_csv(EXPENSE_FILE)
 else:
     expenses_df = pd.DataFrame(columns=["Date", "Spender", "Amount", "Reason", "Remarks", "Start KM", "End KM"])
