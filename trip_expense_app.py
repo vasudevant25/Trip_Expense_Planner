@@ -20,6 +20,7 @@ def load_expenses():
 def save_expense(row):
     df = load_expenses()
     df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    print('Saving Family Expense in ',EXPENSE_FILE)
     df.to_csv(EXPENSE_FILE, index=False)
 
 st.set_page_config(page_title="Trip Expense Manager", layout="centered")
