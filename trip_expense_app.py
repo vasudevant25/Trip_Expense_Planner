@@ -1,59 +1,82 @@
 import streamlit as st
 import pandas as pd
+import os
 from datetime import date
 
-st.title("🚗 Family Trip Expense Splitter")
+# File paths
+FAMILY_FILE = "families.csv"
+EXPENSE_FILE = "expenses.csv"
 
-# ---- Section 1: Trip Distance ----
-st.header("Trip Distance")
-start_km = st.number_input("Enter Start KM", min_value=0)
-end_km = st.number_input("Enter End KM", min_value=start_km)
-distance = end_km - start_km
-st.write(f"**Total Distance:** {distance} KM")
+# Load data
+def load_families():
+    return pd.read_csv(FAMILY_FILE)
 
-# ---- Section 2: Fixed Contribution (2 Families) ----
-st.header("Fixed Contributions")
-fixed_families = {}
-fixed_families["Family A"] = st.number_input("Family A Contribution (₹)", min_value=0)
-fixed_families["Family B"] = st.number_input("Family B Contribution (₹)", min_value=0)
+def load_expenses():
+    if os.path.exists(EXPENSE_FILE):
+        return pd.read_csv(EXPENSE_FILE)
+    else:
+        return pd.DataFrame(columns=["Date", "Spender", "Amount", "Reason", "Remarks", "Start KM", "End KM"])
 
-# ---- Section 3: Expenses Entry ----
-st.header("Expense Entry")
-if "expenses" not in st.session_state:
-    st.session_state.expenses = []
+def save_expense(row):
+    df = load_expenses()
+    df = pd.concat([df, pd.DataFrame([row])], ignore_index=True)
+    df.to_csv(EXPENSE_FILE, index=False)
 
-with st.form("expense_form", clear_on_submit=True):
-    exp_date = st.date_input("Date", value=date.today())
-    amount = st.number_input("Amount (₹)", min_value=0.0)
-    reason = st.text_input("Reason")
-    spent_by = st.text_input("Spent By")
-    remarks = st.text_input("Remarks")
+st.set_page_config(page_title="Trip Expense Manager", layout="centered")
+st.title("🚗 Trip Expense Manager")
+
+families_df = load_families()
+expenses_df = load_expenses()
+
+# -- Expense Entry Section --
+st.header("➕ Add New Expense")
+with st.form("expense_form"):
+    spender = st.selectbox("Who Spent?", families_df["Family Name"].tolist())
+    amount = st.number_input("Amount Spent", min_value=0.0, step=10.0)
+    reason = st.text_input("Reason for Expense")
+    remarks = st.text_input("Remarks (optional)")
+    start_km = st.number_input("Start KM", min_value=0)
+    end_km = st.number_input("End KM", min_value=0)
     submitted = st.form_submit_button("Add Expense")
+
     if submitted:
-        st.session_state.expenses.append({
-            "Date": exp_date,
+        row = {
+            "Date": date.today().isoformat(),
+            "Spender": spender,
             "Amount": amount,
             "Reason": reason,
-            "Spent By": spent_by,
-            "Remarks": remarks
-        })
+            "Remarks": remarks,
+            "Start KM": start_km,
+            "End KM": end_km
+        }
+        save_expense(row)
+        st.success("Expense added!")
 
-# ---- Section 4: Expenses Table ----
-st.header("All Expenses")
-if st.session_state.expenses:
-    expenses_df = pd.DataFrame(st.session_state.expenses)
+# -- View All Expenses --
+st.header("📋 All Expenses")
+if not expenses_df.empty:
+    expenses_df = load_expenses()
     st.dataframe(expenses_df)
-
-    total_expense = expenses_df["Amount"].sum()
-    fixed_total = sum(fixed_families.values())
-    remaining = total_expense - fixed_total
-    per_family_share = remaining / 4 if remaining > 0 else 0
-
-    # ---- Section 5: Summary ----
-    st.subheader("Summary")
-    st.write(f"**Total Expense:** ₹{total_expense:.2f}")
-    st.write(f"**Fixed Contribution Total (2 Families):** ₹{fixed_total:.2f}")
-    st.write(f"**Remaining to be Split (4 Families):** ₹{remaining:.2f}")
-    st.write(f"**Each of 4 Families Pays:** ₹{per_family_share:.2f}")
 else:
     st.info("No expenses added yet.")
+
+# -- Report Section --
+st.header("📊 Expense Summary")
+
+if not expenses_df.empty:
+    family_spent = expenses_df.groupby("Spender")["Amount"].sum().reset_index()
+    shared_families = families_df[families_df["Contribution Type"] == "Shared"]["Family Name"].tolist()
+    total_shared_expense = expenses_df[~expenses_df["Spender"].isin(families_df[families_df["Contribution Type"] == "Fixed"]["Family Name"])]["Amount"].sum()
+    
+    equal_share = total_shared_expense / len(shared_families) if shared_families else 0
+
+    report_df = family_spent.copy()
+    report_df["Should Pay"] = report_df["Spender"].apply(lambda x: equal_share if x in shared_families else 0)
+    report_df["Difference"] = report_df["Amount"] - report_df["Should Pay"]
+    report_df.columns = ["Family", "Spent", "Share to Pay", "Difference"]
+
+    st.dataframe(report_df)
+else:
+    st.info("Report will appear after adding some expenses.")
+
+st.caption("Built with ❤️ by Vasudevan")
