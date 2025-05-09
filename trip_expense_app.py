@@ -128,27 +128,40 @@ with tabs[1]:
 with tabs[2]:
     st.header("Summary Report")
     if not families.empty and not expenses.empty:
+        # Separate families into fixed and shared
         fixed_families = families[families["Fixed_Amount"] > 0]
         shared_families = families[families["Fixed_Amount"] == 0]
 
+        # Calculate total expense and the total fixed amount
         total_expense = expenses["Amount"].sum()
         fixed_total = fixed_families["Fixed_Amount"].sum()
+
+        # Subtract the fixed total from the total expense to calculate the shared expense
         shared_expense = total_expense - fixed_total
 
+        # Calculate the share per family for shared families
         share_per_family = (shared_expense / len(shared_families)) if len(shared_families) > 0 else 0
 
+        # Prepare the report
         report = []
         for _, row in families.iterrows():
             spent = expenses[expenses["Spent_By"] == row["Family"]]["Amount"].sum()
-            expected = row["Fixed_Amount"] if row["Fixed_Amount"] > 0 else share_per_family
+
+            # Set the expected amount based on the family type
+            if row["Fixed_Amount"] > 0:
+                expected = row["Fixed_Amount"]  # Fixed families get their fixed amount
+            else:
+                expected = share_per_family  # Shared families get an equal share
+
+            # Calculate the balance (spent - expected)
             balance = spent - expected
             report.append([row["Family"], spent, expected, balance])
 
+        # Convert the report to a DataFrame for better display
         report_df = pd.DataFrame(report, columns=["Family", "Spent", "Expected", "Balance"])
         st.dataframe(report_df)
     else:
         st.info("Add both families and expenses to generate report.")
-
 # --- Manage Families Tab ---
 with tabs[3]:
     st.header("Manage Families")
