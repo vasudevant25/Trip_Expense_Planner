@@ -112,8 +112,7 @@ with tabs[0]:
 
     if submitted:
         if spender:
-            new_expense = pd.DataFrame([[date_input, spender, amount, reason, remarks]],
-                                       columns=expenses.columns)
+            new_expense = pd.DataFrame([[date_input, spender, amount, reason, remarks]],columns=["Date", "Spent_By", "Amount", "Reason", "Remarks"])
             expenses = pd.concat([expenses, new_expense], ignore_index=True)
             save_data(families, expenses)
             st.success("Expense added successfully!")
