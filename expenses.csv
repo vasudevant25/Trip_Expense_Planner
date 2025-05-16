@@ -1,2 +1,3 @@
-Date,Spent_By,Amount,Reason,Remarks,Start KM,End KM
-2025-05-09,Raja M,2000.0,JMS Room Advance,JMS Room Booked near Thirunallar on May 17th,0,0
+Trip_Name,Date,Spent_By,Amount,Reason,Remarks
+Kumbakonam Navagraga Trip,2025-05-13,Raja M,2000.0,Room Booking,Room booking
+Kumbakonam Navagraga Trip,2025-05-13,Appa,2000.0,Van Advance,Van Advance given
