@@ -1,9 +1,11 @@
 import streamlit as st
 import pandas as pd
 import os
+import time
 from datetime import date
 
 # --- File Paths ---
+TRIP_FILE = "trips.csv"
 FAMILY_FILE = "families.csv"
 EXPENSE_FILE = "expenses.csv"
 
@@ -51,7 +53,6 @@ st.markdown(
         color: black !important; /* Force label text color to black */
         font-weight: bold;
     }
-
     </style>
     """,
     unsafe_allow_html=True
@@ -59,51 +60,69 @@ st.markdown(
 
 # --- Load or Initialize Data ---
 def load_data():
-    if os.path.exists(FAMILY_FILE):
-        try:
-            families = pd.read_csv(FAMILY_FILE)
-            families = pd.read_csv("families.csv")
-            families["Fixed_Amount"] = pd.to_numeric(families["Fixed_Amount"], errors='coerce').fillna(0.0)
-        except Exception as e:
-            st.warning(f"Error loading families.csv: {e}")
-            families = pd.DataFrame(columns=["Family", "Gmail", "Fixed_Amount"])
+    if os.path.exists(TRIP_FILE):
+        trips = pd.read_csv(TRIP_FILE)
     else:
-        families = pd.DataFrame(columns=["Family", "Gmail", "Fixed_Amount"])
+        trips = pd.DataFrame(columns=["Trip_Name"])
+
+    if os.path.exists(FAMILY_FILE):
+        families = pd.read_csv(FAMILY_FILE)
+        families["Fixed_Amount"] = pd.to_numeric(families["Fixed_Amount"], errors='coerce').fillna(0.0)
+    else:
+        families = pd.DataFrame(columns=["Trip_Name", "Family", "Gmail", "Fixed_Amount"])
 
     if os.path.exists(EXPENSE_FILE):
-        try:
-            expenses = pd.read_csv(EXPENSE_FILE)
-            expenses.columns = expenses.columns.str.strip()
-            expenses["Amount"] = pd.to_numeric(expenses["Amount"], errors='coerce').fillna(0.0)
-
-        except Exception as e:
-            st.warning(f"Error loading expenses.csv: {e}")
-            expenses = pd.DataFrame(columns=["Date", "Spent_By", "Amount", "Reason", "Remarks"])
+        expenses = pd.read_csv(EXPENSE_FILE)
+        expenses.columns = expenses.columns.str.strip()
+        expenses["Amount"] = pd.to_numeric(expenses["Amount"], errors='coerce').fillna(0.0)
     else:
-        expenses = pd.DataFrame(columns=["Date", "Spent_By", "Amount", "Reason", "Remarks"])
-    print("Families columns:", families.columns.tolist())
-    print("Expenses columns:", expenses.columns.tolist())
+        expenses = pd.DataFrame(columns=["Trip_Name", "Date", "Spent_By", "Amount", "Reason", "Remarks"])
 
-    return families, expenses
+    return trips, families, expenses
 
-
-def save_data(families, expenses):
+def save_data(trips, families, expenses):
+    trips.to_csv(TRIP_FILE, index=False)
     families.to_csv(FAMILY_FILE, index=False)
     expenses.to_csv(EXPENSE_FILE, index=False)
 
-families, expenses = load_data()
+trips, families, expenses = load_data()
+
+# --- Select or Create Trip ---
+st.sidebar.header("Select or Create Trip")
+trip_names = trips["Trip_Name"].tolist()
+selected_trip = st.sidebar.selectbox("Choose a Trip", trip_names)
+
+with st.sidebar.form("trip_form"):
+    new_trip = st.text_input("Add New Trip")
+    add_trip = st.form_submit_button("Add Trip")
+
+if add_trip and new_trip:
+    if new_trip not in trip_names:
+        trips = pd.concat([trips, pd.DataFrame([[new_trip]], columns=["Trip_Name"])]).reset_index(drop=True)
+        save_data(trips, families, expenses)
+        st.sidebar.success(f"Trip '{new_trip}' added. Please select it from the dropdown.")
+    else:
+        st.sidebar.warning("Trip already exists.")
+
+if not selected_trip:
+    st.warning("Please select or add a trip to proceed.")
+    st.stop()
+
+# --- Filter data for selected trip ---
+trip_families = families[families["Trip_Name"] == selected_trip]
+trip_expenses = expenses[expenses["Trip_Name"] == selected_trip]
 
 # --- Tabs Layout ---
 tabs = st.tabs(["➕ Add Expense", "📄 View Expenses", "📊 Summary Report", "👥 Manage Families"])
 
 # --- Add Expense Tab ---
 with tabs[0]:
-    st.header("Add Expense")
+    st.header(f"Add Expense - Trip: {selected_trip}")
     with st.form("expense_form"):
         col1, col2 = st.columns(2)
         with col1:
             date_input = st.date_input("Date", date.today())
-            spender = st.selectbox("Spent by", families["Family"] if not families.empty else [])
+            spender = st.selectbox("Spent by", trip_families["Family"] if not trip_families.empty else [])
         with col2:
             amount = st.number_input("Amount", min_value=0.0, format="%.2f")
             reason = st.text_input("Reason for Expense")
@@ -112,59 +131,48 @@ with tabs[0]:
 
     if submitted:
         if spender:
-            new_expense = pd.DataFrame([[date_input, spender, amount, reason, remarks]],columns=["Date", "Spent_By", "Amount", "Reason", "Remarks"])
+            new_expense = pd.DataFrame([[selected_trip, date_input, spender, amount, reason, remarks]],
+                                       columns=["Trip_Name", "Date", "Spent_By", "Amount", "Reason", "Remarks"])
             expenses = pd.concat([expenses, new_expense], ignore_index=True)
-            save_data(families, expenses)
+            save_data(trips, families, expenses)
             st.success("Expense added successfully!")
+            time.sleep(5)
+            st.rerun() 
         else:
             st.error("Please add at least one family first.")
 
 # --- View Expenses Tab ---
 with tabs[1]:
-    st.header("View Expenses")
-    st.dataframe(expenses)
+    st.header(f"View Expenses - Trip: {selected_trip}")
+    st.dataframe(trip_expenses)
 
 # --- Summary Report Tab ---
 with tabs[2]:
-    st.header("Summary Report")
-    if not families.empty and not expenses.empty:
-        # Separate families into fixed and shared
-        fixed_families = families[families["Fixed_Amount"] > 0]
-        shared_families = families[families["Fixed_Amount"] == 0]
+    st.header(f"Summary Report - Trip: {selected_trip}")
+    if not trip_families.empty and not trip_expenses.empty:
+        fixed_families = trip_families[trip_families["Fixed_Amount"] > 0]
+        shared_families = trip_families[trip_families["Fixed_Amount"] == 0]
 
-        # Calculate total expense and the total fixed amount
-        total_expense = expenses["Amount"].sum()
+        total_expense = trip_expenses["Amount"].sum()
         fixed_total = fixed_families["Fixed_Amount"].sum()
-
-        # Subtract the fixed total from the total expense to calculate the shared expense
         shared_expense = total_expense - fixed_total
-
-        # Calculate the share per family for shared families
         share_per_family = (shared_expense / len(shared_families)) if len(shared_families) > 0 else 0
 
-        # Prepare the report
         report = []
-        for _, row in families.iterrows():
-            spent = expenses[expenses["Spent_By"] == row["Family"]]["Amount"].sum()
-
-            # Set the expected amount based on the family type
-            if row["Fixed_Amount"] > 0:
-                expected = row["Fixed_Amount"]  # Fixed families get their fixed amount
-            else:
-                expected = share_per_family  # Shared families get an equal share
-
-            # Calculate the balance (spent - expected)
+        for _, row in trip_families.iterrows():
+            spent = trip_expenses[trip_expenses["Spent_By"] == row["Family"]]["Amount"].sum()
+            expected = row["Fixed_Amount"] if row["Fixed_Amount"] > 0 else share_per_family
             balance = spent - expected
             report.append([row["Family"], spent, expected, balance])
 
-        # Convert the report to a DataFrame for better display
         report_df = pd.DataFrame(report, columns=["Family", "Spent", "Expected", "Balance"])
         st.dataframe(report_df)
     else:
         st.info("Add both families and expenses to generate report.")
+
 # --- Manage Families Tab ---
 with tabs[3]:
-    st.header("Manage Families")
+    st.header(f"Manage Families - Trip: {selected_trip}")
     with st.form("family_form"):
         col1, col2, col3 = st.columns(3)
         with col1:
@@ -177,13 +185,16 @@ with tabs[3]:
 
     if add_family:
         if family_name:
-            if family_name in families["Family"].values:
-                st.warning("Family already exists!")
+            if family_name in trip_families["Family"].values:
+                st.warning("Family already exists for this trip!")
             else:
-                new_family = pd.DataFrame([[family_name, gmail, fixed_amount]], columns=families.columns)
+                new_family = pd.DataFrame([[selected_trip, family_name, gmail, fixed_amount]],
+                                          columns=["Trip_Name", "Family", "Gmail", "Fixed_Amount"])
                 families = pd.concat([families, new_family], ignore_index=True)
-                save_data(families, expenses)
+                save_data(trips, families, expenses)
                 st.success(f"Added family: {family_name}")
+                time.sleep(5)
+                st.rerun()
         else:
             st.error("Family name is required!")
-    st.dataframe(families[["Family", "Gmail", "Fixed_Amount"]])  # Shows all columns
+    st.dataframe(trip_families[["Family", "Gmail", "Fixed_Amount"]])
