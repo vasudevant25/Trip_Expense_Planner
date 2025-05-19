@@ -142,10 +142,33 @@ with tabs[0]:
             st.error("Please add at least one family first.")
 
 # --- View Expenses Tab ---
+#with tabs[1]:
+#   st.header(f"View Expenses - Trip: {selected_trip}")
+#  st.dataframe(trip_expenses)
+# View Expenses Tab (Updated)
 with tabs[1]:
     st.header(f"View Expenses - Trip: {selected_trip}")
-    st.dataframe(trip_expenses)
 
+    # Mark duplicates
+    trip_expenses["Duplicate"] = trip_expenses.duplicated(
+        subset=["Trip_Name", "Date", "Spent_By", "Amount", "Reason", "Remarks"],
+        keep='first'
+    )
+
+    if trip_expenses["Duplicate"].any():
+        st.warning("Duplicate expenses detected below. You can delete them.")
+    
+    for idx, row in trip_expenses.iterrows():
+        with st.expander(f"{row['Date']} | {row['Spent_By']} | ₹{row['Amount']} - {row['Reason']}"):
+            st.write(f"**Remarks:** {row['Remarks']}")
+            st.write(f"**Duplicate:** {'Yes' if row['Duplicate'] else 'No'}")
+            if st.button(f"🗑️ Delete Expense #{idx}", key=f"del_{idx}"):
+                expenses.drop(index=trip_expenses.index[idx], inplace=True)
+                expenses.reset_index(drop=True, inplace=True)
+                save_data(trips, families, expenses)
+                st.success("Expense deleted successfully.")
+                time.sleep(2)
+                st.rerun()
 # --- Summary Report Tab ---
 with tabs[2]:
     st.header(f"Summary Report - Trip: {selected_trip}")
