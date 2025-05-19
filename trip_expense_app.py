@@ -142,10 +142,10 @@ with tabs[0]:
             st.error("Please add at least one family first.")
 
 # --- View Expenses Tab ---
-#with tabs[1]:
+with tabs[1]:
    st.header(f"View Expenses - Trip: {selected_trip}")
-  st.dataframe(trip_expenses)
- View Expenses Tab (Updated)
+   st.dataframe(trip_expenses)
+   View Expenses Tab (Updated)
 
 # --- Summary Report Tab ---
 with tabs[2]:
