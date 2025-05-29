@@ -1,11 +1,6 @@
-,Trip_Name,Date,Spent_By,Amount,Reason,Remarks
-0,Kumbakonam Navagraga Trip,2025-05-13,Raja M,2000,Room Booking,Room booking
-1,Kumbakonam Navagraga Trip,2025-05-13,Appa,2000,Van Advance,Van Advance given
-2,Kumbakonam Navagraga Trip,2025-05-19,Appa,0,Van Balance,Remaining Balance for Van
-3,Kumbakonam Navagraga Trip,2025-05-19,Appa,19560,Remaining Balance for Van,Remaining Balance for Van
-4,Kumbakonam Navagraga Trip,2025-05-19,Senthil M,1000,Snacks,Snacks
-5,Kumbakonam Navagraga Trip,2025-05-19,Raja M,15265,Expence from Raja,Food ~ trip
-6,Kumbakonam Navagraga Trip,2025-05-19,Vasu,8184,Expense from Vasu,Expense from Vasu. removed duplicate entry 50 rs.
-7,Kumbakonam Navagraga Trip,2025-05-19,Suresh,150,Water can 3,Water expenses
-8,Kumbakonam Navagraga Trip,2025-05-19,Dinesh K,340,Sunday evening snacks,Sunday evening snacks at Thirunageswaram
-9,Kumbakonam Navagraga Trip,2025-05-19,Dinesh K,2410,Saterday Lunch,Saterday Lunch at miyaladuthurai
+Trip_Name,Date,Spent_By,Amount,Reason,Remarks
+Kumbakonam Trip,2025-05-29,Appa,21560.0,Van Expense,All Van rent + ticket + toll+ permit
+Kumbakonam Trip,2025-05-29,vasudevant,8234.0,Trip Expense,"Desal, parking fee, food"
+Kumbakonam Trip,2025-05-29,Gomathi,1000.0,Snacks,Snacks
+Kumbakonam Trip,2025-05-29,Raja,17965.0,Food expense,Spent for food
+Kumbakonam Trip,2025-05-29,Suresh,6000.0,Given ,given at the end of trip
